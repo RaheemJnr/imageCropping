@@ -1,73 +1,51 @@
 package com.example.imagecropper
 
-import android.app.Activity
-import android.content.Intent
+import android.content.Context
 import android.graphics.*
-import android.os.Build
+import android.net.Uri
 import android.os.Bundle
-import android.provider.MediaStore
 import android.widget.Button
 import android.widget.ImageView
-import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import java.io.IOException
+import java.io.InputStream
 
 
 class MainActivity : AppCompatActivity() {
     private lateinit var imageView: ImageView
 
     //activity result callback
-    private val startForResult =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult())
-        { uri: ActivityResult ->
-            if (uri.resultCode == Activity.RESULT_OK) {
-                imageView = findViewById(R.id.cropperView)
-                val selectedImage = uri.data
-                val filePathColumn = arrayOf(MediaStore.Images.Media.DATA)
-                if (selectedImage != null) {
-                    val cursor = contentResolver.query(
-                        selectedImage.data!!,
-                        filePathColumn, null, null, null
-                    )
-                    if (cursor != null) {
-                        cursor.moveToFirst()
-
-                        val columnIndex = cursor.getColumnIndex(filePathColumn[0])
-                        val picturePath = cursor.getString(columnIndex)
-                        imageView.setImageBitmap(
-                            getRoundedCroppedBitmap(
-                                BitmapFactory.decodeFile(
-                                    picturePath
-                                )
-                            )
-                        )
-                        cursor.close()
-                    }
-                }
-
-            }
+    private val pickImages =
+        registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            imageView = findViewById(R.id.cropperView)
+            imageView.setImageBitmap(
+                getRoundedCroppedBitmap(
+                    decodeUriToBitmap(this, uri)!!
+                )
+            )
         }
 
+
+    @Throws(IOException::class)
+    fun decodeUriToBitmap(mContext: Context, sendUri: Uri?): Bitmap? {
+        val getBitmap: Bitmap
+        val imageStream: InputStream? = mContext.contentResolver.openInputStream(sendUri!!)
+        getBitmap = BitmapFactory.decodeStream(imageStream)
+        imageStream!!.close()
+        return getBitmap
+    }
+
+
     // onCreate activity
-    @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
-        //intent
-        val intent = Intent()
-        intent.type = "image/*"
-        intent.action = Intent.ACTION_GET_CONTENT
-        intent.addCategory(Intent.CATEGORY_OPENABLE)
         // on click listener to open gallery
         val galleryButton = findViewById<Button>(R.id.gallery_button)
         galleryButton.setOnClickListener {
-            startForResult.launch(intent)
-
+            pickImages.launch("image/*")
         }
-
-
     }
 
     // helper method to draw round circle on uploaded image
