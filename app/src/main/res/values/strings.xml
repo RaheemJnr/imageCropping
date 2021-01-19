@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Image Cropper</string>
+    <string name="gallery">Choose Image from Gallery</string>
+</resources>
